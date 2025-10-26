@@ -7,34 +7,42 @@ public class ExpenseFrame extends JFrame {
     private Database db;
     private JTable table;
     private DefaultTableModel model;
+    private JLabel totalLabel; // Összeg megjelenítéséhez
 
     public ExpenseFrame() {
         db = new Database();
+
         setTitle("Költségelszámoló");
-        setSize(500, 400);
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setSize(600, 400);
         setLayout(new BorderLayout());
 
-        // Táblázat
-        model = new DefaultTableModel(new String[]{"ID", "Megnevezés", "Összeg (Ft)"}, 0);
+        // Táblázat modell
+        model = new DefaultTableModel(new Object[]{"ID", "Megnevezés", "Összeg (Ft)"}, 0);
         table = new JTable(model);
-        JScrollPane scrollPane = new JScrollPane(table);
+        add(new JScrollPane(table), BorderLayout.CENTER);
 
         // Gombok
-        JButton addBtn = new JButton("Hozzáadás");
-        JButton deleteBtn = new JButton("Törlés");
-
         JPanel buttonPanel = new JPanel();
-        buttonPanel.add(addBtn);
-        buttonPanel.add(deleteBtn);
+        JButton addButton = new JButton("Hozzáadás");
+        JButton deleteButton = new JButton("Törlés");
+        buttonPanel.add(addButton);
+        buttonPanel.add(deleteButton);
+        add(buttonPanel, BorderLayout.NORTH);
 
-        add(scrollPane, BorderLayout.CENTER);
-        add(buttonPanel, BorderLayout.SOUTH);
+        // 🔹 Összes költség megjelenítése (alul)
+        JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        totalLabel = new JLabel("Összes költség: 0 Ft");
+        totalLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        totalPanel.add(totalLabel);
+        add(totalPanel, BorderLayout.SOUTH);
 
+        // 🔹 Táblázat feltöltése (a totalLabel már létezik!)
         refreshTable();
 
-        addBtn.addActionListener(e -> addExpense());
-        deleteBtn.addActionListener(e -> deleteExpense());
+        // 🔹 Eseménykezelők
+        addButton.addActionListener(e -> addExpense());
+        deleteButton.addActionListener(e -> deleteExpense());
 
         setVisible(true);
     }
@@ -42,30 +50,41 @@ public class ExpenseFrame extends JFrame {
     private void refreshTable() {
         model.setRowCount(0);
         List<Expense> expenses = db.getAllExpenses();
-        for (Expense ex : expenses) {
-            model.addRow(new Object[]{ex.getId(), ex.getName(), ex.getAmount()});
+
+        double total = 0;
+        for (Expense exp : expenses) {
+            model.addRow(new Object[]{exp.getId(), exp.getName(), exp.getAmount()});
+            total += exp.getAmount();
         }
+
+        // Összeg frissítése a labelben
+        totalLabel.setText(String.format("Összes költség: %.2f Ft", total));
     }
 
     private void addExpense() {
         String name = JOptionPane.showInputDialog(this, "Megnevezés:");
-        if (name == null || name.isEmpty()) return;
+        if (name == null || name.isBlank()) return;
 
         String amountStr = JOptionPane.showInputDialog(this, "Összeg (Ft):");
+        if (amountStr == null || amountStr.isBlank()) return;
+
         try {
             double amount = Double.parseDouble(amountStr);
             db.addExpense(name, amount);
             refreshTable();
-        } catch (NumberFormatException ex) {
-            JOptionPane.showMessageDialog(this, "Érvénytelen összeg!", "Hiba", JOptionPane.ERROR_MESSAGE);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "Érvénytelen összeg!");
         }
     }
 
     private void deleteExpense() {
-        int row = table.getSelectedRow();
-        if (row == -1) return;
+        int selectedRow = table.getSelectedRow();
+        if (selectedRow == -1) {
+            JOptionPane.showMessageDialog(this, "Válassz ki egy sort a törléshez!");
+            return;
+        }
 
-        int id = (int) model.getValueAt(row, 0);
+        int id = (int) model.getValueAt(selectedRow, 0);
         db.deleteExpense(id);
         refreshTable();
     }
