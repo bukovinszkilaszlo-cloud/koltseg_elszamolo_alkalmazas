@@ -1,23 +1,26 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.io.FileOutputStream;
 import java.util.List;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
 public class ExpenseFrame extends JFrame {
     private Database db;
     private JTable table;
     private DefaultTableModel model;
-    private JLabel totalLabel; // Összeg megjelenítéséhez
+    private JLabel totalLabel;
 
     public ExpenseFrame() {
         db = new Database();
 
         setTitle("Költségelszámoló");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(600, 400);
+        setSize(700, 400);
         setLayout(new BorderLayout());
 
-        // Táblázat modell
+        // Táblázat
         model = new DefaultTableModel(new Object[]{"ID", "Megnevezés", "Összeg (Ft)"}, 0);
         table = new JTable(model);
         add(new JScrollPane(table), BorderLayout.CENTER);
@@ -26,23 +29,26 @@ public class ExpenseFrame extends JFrame {
         JPanel buttonPanel = new JPanel();
         JButton addButton = new JButton("Hozzáadás");
         JButton deleteButton = new JButton("Törlés");
+        JButton exportButton = new JButton("Exportálás Excelbe");
         buttonPanel.add(addButton);
         buttonPanel.add(deleteButton);
+        buttonPanel.add(exportButton);
         add(buttonPanel, BorderLayout.NORTH);
 
-        // 🔹 Összes költség megjelenítése (alul)
+        // Összes költség label
         JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         totalLabel = new JLabel("Összes költség: 0 Ft");
-        totalLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        totalLabel.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 14));
         totalPanel.add(totalLabel);
         add(totalPanel, BorderLayout.SOUTH);
 
-        // 🔹 Táblázat feltöltése (a totalLabel már létezik!)
+        // Feltöltés
         refreshTable();
 
-        // 🔹 Eseménykezelők
+        // Eseménykezelők
         addButton.addActionListener(e -> addExpense());
         deleteButton.addActionListener(e -> deleteExpense());
+        exportButton.addActionListener(e -> exportToExcel());
 
         setVisible(true);
     }
@@ -50,14 +56,11 @@ public class ExpenseFrame extends JFrame {
     private void refreshTable() {
         model.setRowCount(0);
         List<Expense> expenses = db.getAllExpenses();
-
         double total = 0;
         for (Expense exp : expenses) {
             model.addRow(new Object[]{exp.getId(), exp.getName(), exp.getAmount()});
             total += exp.getAmount();
         }
-
-        // Összeg frissítése a labelben
         totalLabel.setText(String.format("Összes költség: %.2f Ft", total));
     }
 
@@ -83,9 +86,66 @@ public class ExpenseFrame extends JFrame {
             JOptionPane.showMessageDialog(this, "Válassz ki egy sort a törléshez!");
             return;
         }
-
         int id = (int) model.getValueAt(selectedRow, 0);
         db.deleteExpense(id);
         refreshTable();
+    }
+
+    private void exportToExcel() {
+        List<Expense> expenses = db.getAllExpenses();
+        if (expenses.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Nincs exportálandó adat!");
+            return;
+        }
+
+        JFileChooser fileChooser = new JFileChooser();
+        fileChooser.setDialogTitle("Mentés Excel fájlként");
+        fileChooser.setSelectedFile(new java.io.File("koltsegek.xlsx"));
+
+        int userSelection = fileChooser.showSaveDialog(this);
+        if (userSelection != JFileChooser.APPROVE_OPTION) return;
+
+        java.io.File fileToSave = fileChooser.getSelectedFile();
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = workbook.createSheet("Költségek");
+
+            // Fejléc
+            Row header = sheet.createRow(0);
+            String[] columns = {"ID", "Megnevezés", "Összeg (Ft)"};
+
+            CellStyle boldStyle = workbook.createCellStyle();
+            org.apache.poi.ss.usermodel.Font font = workbook.createFont(); // POI Font teljesen kvalifikált
+            font.setBold(true);
+            boldStyle.setFont(font);
+
+            for (int i = 0; i < columns.length; i++) {
+                Cell cell = header.createCell(i);
+                cell.setCellValue(columns[i]);
+                cell.setCellStyle(boldStyle);
+            }
+
+            // Adatok
+            int rowNum = 1;
+            for (Expense exp : expenses) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(exp.getId());
+                row.createCell(1).setCellValue(exp.getName());
+                row.createCell(2).setCellValue(exp.getAmount());
+            }
+
+            for (int i = 0; i < columns.length; i++) {
+                sheet.autoSizeColumn(i);
+            }
+
+            try (FileOutputStream fileOut = new FileOutputStream(fileToSave)) {
+                workbook.write(fileOut);
+            }
+
+            JOptionPane.showMessageDialog(this, "✅ Export sikeres: " + fileToSave.getAbsolutePath());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(this, "❌ Hiba az exportálás során: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
