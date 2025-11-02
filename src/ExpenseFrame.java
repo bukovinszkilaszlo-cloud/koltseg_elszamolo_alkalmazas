@@ -47,6 +47,8 @@ public class ExpenseFrame extends JFrame {
         buttonPanel.add(exportButton);
         add(buttonPanel, BorderLayout.NORTH);
 
+
+
         // Összes költség label
         JPanel totalPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         totalLabel = new JLabel("Összes költség: 0 Ft");
@@ -64,6 +66,8 @@ public class ExpenseFrame extends JFrame {
         exportButton.addActionListener(e -> exportToExcel());
 
         setVisible(true);
+        setLocationRelativeTo(null);
+
     }
 
     private void refreshTable() {
