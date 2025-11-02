@@ -1,6 +1,8 @@
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.Color;
+import java.awt.Font;
 import java.io.FileOutputStream;
 import java.util.List;
 import org.apache.poi.ss.usermodel.*;
@@ -24,6 +26,13 @@ public class ExpenseFrame extends JFrame {
         model = new DefaultTableModel(new Object[]{"ID", "Megnevezés", "Összeg (Ft)"}, 0);
         table = new JTable(model);
         add(new JScrollPane(table), BorderLayout.CENTER);
+        table.setFillsViewportHeight(true);
+        table.setRowHeight(25);
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+        table.setSelectionBackground(new Color(173, 216, 230));
+        table.getTableHeader().setReorderingAllowed(false);
+        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
 
         // Gombok
         JPanel buttonPanel = new JPanel();
@@ -41,6 +50,7 @@ public class ExpenseFrame extends JFrame {
         totalLabel.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 14));
         totalPanel.add(totalLabel);
         add(totalPanel, BorderLayout.SOUTH);
+
 
         // Feltöltés
         refreshTable();
