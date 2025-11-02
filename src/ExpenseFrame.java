@@ -34,6 +34,9 @@ public class ExpenseFrame extends JFrame {
         table.getTableHeader().setReorderingAllowed(false);
         table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
 
+        table.setAutoCreateRowSorter(true); //Növekvő/csökkenő sorrend
+
+
         // Gombok
         JPanel buttonPanel = new JPanel();
         JButton addButton = new JButton("Hozzáadás");
